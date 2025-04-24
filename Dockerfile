@@ -1,0 +1,84 @@
+FROM ubuntu:20.04
+
+LABEL version="1.0" \
+      description="Container for UPDGraph"
+
+# Avoid interactive questions
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LC_ALL=C
+
+# Install dependencies and required tools
+RUN apt-get update && apt-get -y upgrade && \
+    apt-get install -y \
+        build-essential \
+        wget \
+        bc \
+        curl \
+        git \
+        unzip \
+        pkg-config \
+        libncurses5-dev \
+        zlib1g-dev \
+        libbz2-dev \
+        liblzma-dev \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        python3 \
+        python3-pip \
+        python3-dev \
+        perl \
+        cpanminus \
+        r-base \
+        r-base-dev && \
+    ln -sf /usr/bin/python3 /usr/bin/python && \
+    pip3 install numpy pandas matplotlib argparse && \
+    # Install BCFTools
+    wget https://github.com/samtools/bcftools/releases/download/1.13/bcftools-1.13.tar.bz2 && \
+    tar -xjf bcftools-1.13.tar.bz2 && \
+    cd bcftools-1.13 && \
+    ./configure && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf bcftools-1.13* && \
+    # Install BEDTools
+    wget https://github.com/arq5x/bedtools2/releases/download/v2.30.0/bedtools-2.30.0.tar.gz && \
+    tar -zxf bedtools-2.30.0.tar.gz && \
+    cd bedtools2 && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf bedtools* && \
+    # Install Samtools
+    wget https://github.com/samtools/samtools/releases/download/1.13/samtools-1.13.tar.bz2 && \
+    tar -xjf samtools-1.13.tar.bz2 && \
+    cd samtools-1.13 && \
+    ./configure && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf samtools-1.13* && \
+    # Install HTSlib
+    wget https://github.com/samtools/htslib/releases/download/1.13/htslib-1.13.tar.bz2 && \
+    tar -xjf htslib-1.13.tar.bz2 && \
+    cd htslib-1.13 && \
+    ./configure && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf htslib-1.13* && \
+    # Clone repositories into /opt/ directory
+    mkdir -p /opt && \
+    cd /opt && \
+    git clone https://github.com/Fred-07/AutoMap.git && \
+    git clone https://github.com/Fred-07/UPDgraph.git && \
+    chmod -R 755 /opt/AutoMap /opt/UPDgraph && \
+    # Clean up
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Add tools to PATH
+ENV PATH="${PATH}:/usr/local/bin:/opt/AutoMap:/opt/UPDgraph"
+
+# Set default command
+CMD ["/bin/bash"]

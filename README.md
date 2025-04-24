@@ -4,18 +4,17 @@ UPDgraph is a software tool for detecting Uniparental Disomies (UPDs) from trio 
 
 ## Overview & Features
 
-UPDgraph operates in several steps:
+UPDgraph operates as follows:
 
-1. **Trio Extraction**: Extracts the trio (child, father, mother) from a multi-sample VCF/BCF file based on a PED file
-2. **Variant Classification**: Uses BCFtools to classify variants based on their inheritance pattern
-3. **ROH Analysis**: Utilizes AutoMap to identify Runs of Homozygosity (for hg19/hg38 genomes)
-4. **Visualization**: Generates comprehensive ideogram plots combining all the information
+- Extracts the trio (child, father, mother) from a multi-sample VCF/BCF file based on a PED file
+- Uses BCFtools to sort variants based on their inheritance pattern
+- Runs AutoMap to identify ROH (for hg19/hg38 genomes only)
+- Generates comprehensive ideogram plots combining all the information
 
 Key features:
-- **Trio-based Analysis**: Works with standard VCF/BCF files containing child, mother, and father genotype information
-- **Flexible Reference Genome**: Compatible with hg19, hg38, and T2T reference genomes
-- **Multiple Deployment Options**: Run via Singularity, Docker, or locally
-- **Simple Execution**: Single command execution through a bash launcher script
+- Works with standard VCF/BCF files containing child, father, and mother genotype 
+- Compatible with hg19, hg38, and T2T reference genomes
+- Run via Singularity, Docker, or locally
 
 ![Example UPDgraph output](https://github.com/Fred-07/UPDgraph/images/example_output.png)
 
@@ -32,10 +31,10 @@ git clone https://github.com/Fred-07/UPDgraph.git
 cd UPDgraph
 
 # Build the Singularity container
-singularity build UPDgraph.sif UPDgraph.def
+singularity build UPDgraph.sif UPDgraph_singularity.def
 
-# Run UPDgraph using Singularity  # A VERIFIER !!!!
-singularity exec -B $PWD UPDgraph.sif launcher.sh --vcf sample.vcf.gz -p family.ped -g hg38 -o output.png
+# Run UPDgraph using Singularity
+singularity exec -B $PWD UPDgraph.sif bash UPDgraph.sh --vcf trio.vcf.gz -p family.ped -g hg19 -o output.png
 ```
 
 ### Option 2: Using Docker
@@ -45,40 +44,36 @@ singularity exec -B $PWD UPDgraph.sif launcher.sh --vcf sample.vcf.gz -p family.
 git clone https://github.com/Fred-07/UPDgraph.git
 cd UPDgraph
 
-# Build the Docker container # A VERIFIER !!!!
+# Build the Docker container ?????? Demander à VY
 docker build -t UPDgraph .
 
-# Run UPDgraph using Docker # A VERIFIER !!!!
-docker run -v $(pwd):/data UPDgraph launcher.sh --vcf /data/sample.vcf.gz -p /data/family.ped -g hg38 -o /data/output.png
+# Run UPDgraph using Docker ?????? Demander à VY
+docker run -v $(pwd):/data UPDgraph bash UPDgraph.sh --vcf trio.vcf.gz -p family.ped -g hg19 -o output.png
 ```
 
 ### Option 3: Local Installation
 
-Prerequisites:  # A VERIFIER !!!!
+Prerequisites:
 - Python 3+ with basic libraries: matplotlib, argparse
 - BCFtools (v1.13+)
 - AutoMap Fork (https://github.com/Fred-07/AutoMap)
-        - BEDTools (v2.30.0+)
-        - R (v3.5+)
-        - Perl (v5.22+)
+	- BEDTools (v2.30.0+)
+	- R (v3.5+)
+	- Perl (v5.22+)
 
 
 ```bash
 # Clone the repository
 git clone https://github.com/Fred-07/UPDgraph.git
-cd UPDgraph
 
-# Clone AutoMap if not already installed  # A VERIFIER !!!!
-git clone https://github.com/Fred-07/AutoMap.git /opt/AutoMap
+# Clone AutoMap if not already installed
+git clone https://github.com/Fred-07/AutoMap.git
 
-# Make launcher script executable  # A VERIFIER !!!!
-chmod +x launcher.sh
-
-# Run UPDgraph locally  # A VERIFIER !!!!
-./launcher.sh --vcf sample.vcf.gz -p family.ped -g hg38 -o output.png
+# Run UPDgraph locally
+bash ./UPDgraph/UPDgraph.sh --vcf sample.vcf.gz -p family.ped -g hg19 -a ./AutoMap/ -u ./UPDgraph/ -o output.png 
 ```
 
-**Note**: For local installation, ensure AutoMap is in /opt/AutoMap/ or modify the path in launcher.sh accordingly.
+**Note**: For local installation, specify the path to AutoMap (-a) and UPDgraph (-u) in the command.
 
 
 ## Usage
@@ -86,7 +81,7 @@ chmod +x launcher.sh
 Regardless of the installation method, UPDgraph is used with the same basic command structure:
 
 ```bash
-launcher.sh --vcf <vcf_file> -p <pedfile> -g <genome> -o <output_file> [options]
+bash UPDgraph.sh --vcf <vcf_file> -p <pedfile> -g <genome> -o <output_file> [options]
 ```
 
 ### Required Arguments:
@@ -99,21 +94,11 @@ launcher.sh --vcf <vcf_file> -p <pedfile> -g <genome> -o <output_file> [options]
 - `-v, --verbose`: Verbosity level from 1 (low) to 3 (high) (default: 1)
 - `-n, --naming_chr`: Specify a prefix for chromosome naming in the plot (e.g., 'chr') (default: '')
 - `-r, --readdepth`: Minimum read depth to consider a position (default: 8)
-- `-k, --keepcreatedfiles`: Keep the existing files created with UPDgraph: yes/no (default: 'no')
+- `-k, --keepcreatedfiles`: Keep the existing files created with UPDgraph (default: 'yes')
 - `-t, --threads`: Number of threads to use with bcftools (default: 1)
+- `-u, --UPDgraph_py_HOME`: Specify the path for UPDgraph.py (default: '/opt/UPDgraph/')
+- `-a, --AUTOMAP_HOME`: Specify the path for automap_vx.x.x.sh (default: '/opt/AutoMap/')
 
-### Examples:
-
-```bash
-# Using Singularity  # A VERIFIER !!!!
-singularity exec UPDgraph.sif launcher.sh --vcf family1.vcf.gz -p family1.ped -g hg38 -o family1_upd_plot.png
-
-# Using Docker  # A VERIFIER !!!!
-docker run -v $(pwd):/data UPDgraph launcher.sh --vcf /data/family1.vcf.gz -p /data/family1.ped -g hg38 -o /data/family1_upd_plot.png
-
-# Running locally  # A VERIFIER !!!!
-./launcher.sh --vcf family1.vcf.gz -p family1.ped -g hg38 -o family1_upd_plot.png
-```
 
 ## Input Files
 
@@ -123,19 +108,19 @@ docker run -v $(pwd):/data UPDgraph launcher.sh --vcf /data/family1.vcf.gz -p /d
 
 ### PED File Format
 
-The PED file should contain a single line with 6 tab-separated fields:
+- The PED file should contain a single line with 6 tab-separated fields:
 ```
 FamilyID  Proband  Father  Mother  Sex  DiseaseStatus
 ```
 
-Example:
+- Example:
 ```
 FAM001  CHILD001  FATHER001  MOTHER001  1  2
 ```
 
-Where:
-- Sex: 1=male, 2=female, 0=unknown
-- DiseaseStatus: 1=unaffected, 2=affected (not used by UPDgraph)
+- Where:
+	- Sex: 1=male, 2=female, 0=unknown
+	- DiseaseStatus: 1=unaffected, 2=affected (not used by UPDgraph)
 
 ## Output and Interpretation
 
@@ -170,17 +155,8 @@ UPDgraph generates an ideogram plot file with the specified output name showing:
 
 This project is licensed under the [GPL-3.0 license](https://www.gnu.org/licenses/gpl-3.0.en.html) - see the LICENSE file for details.
 
-## Citation
-
-If you use UPDgraph in your research, please cite:
-
-```
-UPDgraph: A tool for visual detection of uniparental disomy from trio sequencing data. (manuscript in preparation)
-```
-
 ## Acknowledgements
-
-UPDgraph was developed by Frédéric Masclaux and Baptiste Micheli at the Genetic Medicine Division, Hôpitaux Universitaires de Genève (HUG).
+UPDgraph was developed at the Genetic Medicine Division, Hôpitaux Universitaires de Genève (HUG).
 
 We thank:
 - The developers of BCFtools, AutoMap, and other dependencies
@@ -188,4 +164,6 @@ We thank:
 - Our bioinformatician colleagues for testing and suggestions
 
 ## Contact
+
+For questions, support, or collaboration:
 - GitHub Issues: https://github.com/Fred-07/UPDgraph/issues

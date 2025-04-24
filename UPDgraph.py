@@ -252,9 +252,6 @@ total_variants = {
 
 # loop to add all chromosomes
 for chr_name, length_chr, centro in chromosomes[genome]:
-    if chr_name == "Y":
-        continue
-    else:
         chr_name_plot = naming_chr + str(chr_name)
         ax.text(x1 - 1, y - 0.200, chr_name_plot, fontsize=14, ha='right')
 

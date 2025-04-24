@@ -6,16 +6,21 @@ version="1.0.0"
 function usage {
     echo "Usage: $0 [options]"
     echo "Options:"
-    echo "  -v, --verbose           Verbosity level from 1 (low) to 3 (high)"
+    echo "  -v, --verbose            Verbosity level from 1 (low) to 3 (high)"
     # echo "  -c, --chromosomes  Fasta file or chromosome sizes"
-    echo "  -g, --genome            Human genome (possible choices: hg19, hg38, T2T)"
-    echo "  --vcf                   Multi-sample VCF file"
-    echo "  -p, --pedfile           family info 1-line: "
-    echo "  -n, --naming_chr        specify a name to use for chromosome naming in the plot (e.g. 'chr') [ default='' ]"
-    echo "  -r, --readdepth         minimum read depth to consider a position [ default=''8' ]"
-    echo "  -o, --output            filename of the .png output file [ default='plot.png' ]"
-    echo "  -k, --keepcreatedfiles  keep the existing files created with UPDgraph : yes/no [ default='no' ]"
-    echo "  -t, --threads           number of threads to use with bcftools [ default='1' ]"
+    echo "  -g, --genome             Human genome (possible choices: hg19, hg38, T2T)"
+    echo "  --vcf                    Multi-sample VCF file"
+    echo "  -p, --pedfile            family info 1-line: "
+    echo "  -n, --naming_chr         specify a name to use for chromosome naming in the plot (e.g. 'chr') [ default='' ]"
+    echo "  -r, --readdepth          minimum read depth to consider a position [ default=''8' ]"
+    echo "  -o, --output             filename of the .png output file [ default='plot.png' ]"
+    echo "  -k, --overwritefiles     overwrite the existing files created previously with UPDgraph : yes/no [ default='yes' ]"
+    echo "  -m, --keeptemporaryfiles keep temporary files created with UPDgraph : yes/no [ default='yes' ]"
+    echo "  -t, --threads            number of threads to use with bcftools [ default='1' ]"
+    echo "  -u, --UPDgraph_py_HOME   specify the path for UPDgraph.py. Default option uses UPDgraph.py from container [ default='/opt/UPDgraph/' ]"
+    echo "  -a, --AUTOMAP_HOME       specify the path for automap_vx.x.x.sh. Default option uses automap_vx.x.x.sh from container [ default='/opt/AutoMap/' ]"
+    echo "  -y, --show_chrY          plot the chromosome Y : yes/no [ default='yes' ]"
+
     exit 1
 }
 
@@ -28,8 +33,11 @@ output="plot.png"
 pedfile=""
 naming_chr=""
 readdepth="8"
-keepcreatedfiles="no"
+overwritefiles="yes"
+keeptemporaryfiles="yes"
 threads="1"
+UPDgraph_py_HOME='/opt/UPDgraph/'
+AUTOMAP_HOME="/opt/AutoMap/"
 
 chrom_list_noY="chr1,chr2,chr3,chr4,chr5,chr6,chr7,chr8,chr9,chr10,chr11,chr12,chr13,chr14,chr15,chr16,chr17,chr18,chr19,chr20,chr21,chr22,chrX,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,X"
 chrom_list_Y="Y,chrY"
@@ -81,10 +89,18 @@ while [[ $# -gt 0 ]]; do
                 exit 1
             fi
             ;;
-        -k|--keepcreatedfiles)
-            keepcreatedfiles="$2"
-            if [[ -n "$keepcreatedfiles" && "$keepcreatedfiles" != "no" && "$keepcreatedfiles" != "yes"  ]]; then
-                echo "Error: -k/--keepcreatedfiles must be yes or no."
+        -k|--overwritefiles)
+            overwritefiles="$2"
+            if [[ -n "$overwritefiles" && "$overwritefiles" != "no" && "$overwritefiles" != "yes"  ]]; then
+                echo "Error: -k/--overwritefiles must be yes or no."
+                usage
+            fi
+            shift 2
+            ;;
+        -m|--keeptemporaryfiles)
+            keeptemporaryfiles="$2"
+            if [[ -n "$keeptemporaryfiles" && "$keeptemporaryfiles" != "no" && "$keeptemporaryfiles" != "yes"  ]]; then
+                echo "Error: -m/--keeptemporaryfiles must be yes or no."
                 usage
             fi
             shift 2
@@ -94,6 +110,24 @@ while [[ $# -gt 0 ]]; do
             if ! [[ "$threads" =~ ^[0-9]+$ ]]; then
                 echo "Error: -t/--threads must be an integer."
                 exit 1
+            fi
+            shift 2
+            ;;
+        -u|--UPDgraph_py_HOME)
+            UPDgraph_py_HOME="$2"
+            shift 2
+            ;;
+        -a|--AUTOMAP_HOME)
+            AUTOMAP_HOME="$2"
+            shift 2
+            ;;
+        -y|--show_chrY)
+            show_chrY="$2"
+            if [[ -n "$show_chrY" && "$show_chrY" != "no" && "$show_chrY" != "yes"  ]]; then
+                echo "Error: -m/--keeptemporaryfilesy must be yes or no."
+                usage
+            elif [[ -n "$show_chrY" && "$show_chrY" == "no" ]]; then
+                chrom_list_Y=""
             fi
             shift 2
             ;;
@@ -133,7 +167,7 @@ echo "VCF file:             $vcf"
 echo "pedfile:              $pedfile"
 echo "naming_chr:           $naming_chr"
 echo "read depth:           $readdepth"
-echo "keep created files:   $keepcreatedfiles"
+echo "keep created files:   $overwritefiles"
 echo "threads:              $threads"
 echo -e "###############################\n"
 
@@ -172,7 +206,7 @@ else
     echo "Error: The ped file does not exist."
 fi
 
-
+printf %31s"\n" |tr " " "#"
 ########################################################################
 ###                 Index vcf/bcf file if not present                ###
 ########################################################################
@@ -195,7 +229,7 @@ else
 fi
 
 # Remove previous file if necessary
-if [ -f "$index_file" ] && [ "$keepcreatedfiles" = "no" ]; then
+if [ -f "$index_file" ] && [ "$overwritefiles" = "yes" ]; then
     rm "$index_file"
     echo "Index file removed."
 else
@@ -207,6 +241,7 @@ if [ ! -f "$index_file" ]; then
     echo "Index created: $index_file"
 fi
 
+printf %31s"\n" |tr " " "#"
 ########################################################################
 ###                Extract trio samples from bcf/vcf                 ###
 ########################################################################
@@ -223,34 +258,43 @@ vcf_samples=$(bcftools query -l "$inputfile")
 found_all_samples=""
 for sample in $proband $father $mother; do
     if echo "$vcf_samples" | grep -q "^$sample$"; then
-        echo "Sample $sample exists in the file."
+        echo "Sample $sample exists in the initial file $inputfile."
     else
-        echo "Sample $sample does not exist in the file."
+        echo "Sample $sample does not exist in the file $inputfile."
         found_all_samples="no"
     fi
 done
 
 if [[ $found_all_samples != "no" ]]; then
-  if [ -f "$trio_vcf_file" ] && [ "$keepcreatedfiles" = "no" ]; then
+  if [ -f "$trio_vcf_file" ] && [ "$overwritefiles" = "yes" ]; then
       rm "$trio_vcf_file"
       echo "'Trio vcf file' is removed."
   fi
   if [ ! -f "$trio_vcf_file" ]; then
-    bcftools view --threads "$threads" -Ob -s "$proband","$father","$mother" -r "$chrom_list_noY","$chrom_list_Y" "$inputfile" > "$trio_vcf_file"
+    echo "Extracting trio from $inputfile to 'Trio vcf file': $trio_vcf_file"
+    nbPASS=$(bcftools query -f "QUAL\n" "$inputfile" | grep -c "PASS" )
+    if [[ "$nbPASS" -gt 0 ]]; then
+        echo "Field QUAL=PASS is detected"
+        bcftools view --threads "$threads" -f PASS -s "$proband","$father","$mother" -r "$chrom_list_noY","$chrom_list_Y" "$inputfile" | bcftools norm --multiallelics - | awk '{if ($0 ~ /\t[0-9]\|[0-9]:/) gsub(/\|/, "/"); print}' | bcftools view -Ob -o "$trio_vcf_file"
+    else
+        echo "no field QUAL=PASS"
+        bcftools view --threads "$threads" -s "$proband","$father","$mother" -r "$chrom_list_noY","$chrom_list_Y" "$inputfile" | bcftools norm --multiallelics - | awk '{if ($0 ~ /\t[0-9]\|[0-9]:/) gsub(/\|/, "/"); print}' | bcftools view -Ob -o "$trio_vcf_file"
+    fi
+    echo "'Trio vcf file' is created: $trio_vcf_file"
   fi
 else
   echo "Not all samples are found in the vcf file"
   exit 1
 fi
 
-
+printf %31s"\n" |tr " " "#"
 ########################################################################
 ###                        Index trio bcf file                       ###
 ########################################################################
 echo ">> Index trio bcf file"
 
 # Remove previous file if necessary
-if [ -f "${trio_vcf_file}.csi" ] && [ "$keepcreatedfiles" = "no" ]; then
+if [ -f "${trio_vcf_file}.csi" ] && [ "$overwritefiles" = "yes" ]; then
   rm "${trio_vcf_file}.csi"
   echo "'Index trio bcf file' is removed."
 fi
@@ -258,6 +302,7 @@ if [ ! -f "${trio_vcf_file}.csi" ]; then
   bcftools index --threads "$threads" "$trio_vcf_file"
 fi
 
+printf %31s"\n" |tr " " "#"
 ########################################################################
 ###          Analyse trio vcf and report variants of interest        ###
 ########################################################################
@@ -273,49 +318,57 @@ truncate -s 0 "$variant_heredity_file"
 # 1/1 0/1 0/0
 # 0/0 0/1 1/1
 # 0/0 0/0 1/1
-bcftools view --threads "$threads" -r $chrom_list_noY -Ou "$trio_vcf_file" | bcftools view --threads "$threads" -Ou -i "FORMAT/DP[0] > $readdepth && FORMAT/DP[1] > $readdepth && FORMAT/DP[2] > $readdepth" | bcftools view --threads "$threads" -Ou -i '(FORMAT/GT[0] == "1/1" && FORMAT/GT[1] == "1/1" && FORMAT/GT[2] == "0/0") || (FORMAT/GT[0] == "1/1" && FORMAT/GT[1] == "0/1" && FORMAT/GT[2] == "0/0") || (FORMAT/GT[0] == "0/0" && FORMAT/GT[1] == "0/1" && FORMAT/GT[2] == "1/1") || (FORMAT/GT[0] == "0/0" && FORMAT/GT[1] == "0/0" && FORMAT/GT[2] == "1/1") ' | bcftools query -f "%CHROM\t%POS\tFF\n" | sed 's/^chr//' >> $variant_heredity_file
+bcftools view --threads "$threads" -r $chrom_list_noY -Ou "$trio_vcf_file" | bcftools view --threads "$threads" -Ou  -i "FORMAT/DP[0] > $readdepth && FORMAT/DP[1] > $readdepth && FORMAT/DP[2] > $readdepth" | bcftools view --threads "$threads" -Ou -i '(FORMAT/GT[0] == "1/1" && FORMAT/GT[1] == "1/1" && FORMAT/GT[2] == "0/0") || (FORMAT/GT[0] == "1/1" && FORMAT/GT[1] == "0/1" && FORMAT/GT[2] == "0/0") || (FORMAT/GT[0] == "0/0" && FORMAT/GT[1] == "0/1" && FORMAT/GT[2] == "1/1") || (FORMAT/GT[0] == "0/0" && FORMAT/GT[1] == "0/0" && FORMAT/GT[2] == "1/1") ' | bcftools query -f "%CHROM\t%POS\tFF\n" | sed 's/^chr//' >> $variant_heredity_file
 
 # Variants inherited only from Mother
 # 1/1 0/0 1/1
 # 1/1 0/0 0/1
 # 0/0 1/1 0/1
 # 0/0 1/1 0/0
-bcftools view --threads "$threads" -r $chrom_list_noY -Ou "$trio_vcf_file" | bcftools view --threads "$threads" -Ou -i "FORMAT/DP[0] > $readdepth && FORMAT/DP[1] > $readdepth && FORMAT/DP[2] > $readdepth" | bcftools view --threads "$threads" -Ou -i '(FORMAT/GT[0] == "1/1" && FORMAT/GT[1] == "0/0" && FORMAT/GT[2] == "1/1") || (FORMAT/GT[0] == "1/1" && FORMAT/GT[1] == "0/0" && FORMAT/GT[2] == "0/1") || (FORMAT/GT[0] == "0/0" && FORMAT/GT[1] == "1/1" && FORMAT/GT[2] == "0/1") || (FORMAT/GT[0] == "0/0" && FORMAT/GT[1] == "1/1" && FORMAT/GT[2] == "0/0")' | bcftools query -f "%CHROM\t%POS\tFM\n" | sed 's/^chr//' >> "$variant_heredity_file"
+bcftools view --threads "$threads" -r $chrom_list_noY -Ou "$trio_vcf_file" | bcftools view --threads "$threads" -Ou  -i "FORMAT/DP[0] > $readdepth && FORMAT/DP[1] > $readdepth && FORMAT/DP[2] > $readdepth" | bcftools view --threads "$threads" -Ou -i '(FORMAT/GT[0] == "1/1" && FORMAT/GT[1] == "0/0" && FORMAT/GT[2] == "1/1") || (FORMAT/GT[0] == "1/1" && FORMAT/GT[1] == "0/0" && FORMAT/GT[2] == "0/1") || (FORMAT/GT[0] == "0/0" && FORMAT/GT[1] == "1/1" && FORMAT/GT[2] == "0/1") || (FORMAT/GT[0] == "0/0" && FORMAT/GT[1] == "1/1" && FORMAT/GT[2] == "0/0")' | bcftools query -f "%CHROM\t%POS\tFM\n" | sed 's/^chr//' >> "$variant_heredity_file"
 
 # From both parents
 # 0/1 1/1 0/0
 # 0/1 0/0 1/1
-bcftools view --threads "$threads" -r $chrom_list_noY -Ou "$trio_vcf_file" | bcftools view --threads "$threads" -Ou -i "FORMAT/DP[0] > $readdepth && FORMAT/DP[1] > $readdepth && FORMAT/DP[2] > $readdepth" | bcftools view --threads "$threads" -Ou -i '(FORMAT/GT[0] == "0/1" && FORMAT/GT[1] == "1/1" && FORMAT/GT[2] == "0/0") || (FORMAT/GT[0] == "0/1" && FORMAT/GT[1] == "0/0" && FORMAT/GT[2] == "1/1")' | bcftools query -f "%CHROM\t%POS\tBP\n" | sed 's/^chr//' >> "$variant_heredity_file"
+bcftools view --threads "$threads" -r $chrom_list_noY -Ou "$trio_vcf_file" | bcftools view --threads "$threads" -Ou  -i "FORMAT/DP[0] > $readdepth && FORMAT/DP[1] > $readdepth && FORMAT/DP[2] > $readdepth" | bcftools view --threads "$threads" -Ou -i '(FORMAT/GT[0] == "0/1" && FORMAT/GT[1] == "1/1" && FORMAT/GT[2] == "0/0") || (FORMAT/GT[0] == "0/1" && FORMAT/GT[1] == "0/0" && FORMAT/GT[2] == "1/1")' | bcftools query -f "%CHROM\t%POS\tBP\n" | sed 's/^chr//' >> "$variant_heredity_file"
 
 # For chrY
 # 1/1 1/1 -/-
 if [[ $chrom_list_Y != "" ]]; then
-    bcftools view --threads "$threads" -r $chrom_list_Y -Ou "$trio_vcf_file" | bcftools view --threads "$threads" -Ou -i "FORMAT/DP[0] > $readdepth && FORMAT/DP[1] > $readdepth && FORMAT/DP[2] < $((readdepth/2))" | bcftools view --threads "$threads" -Ou -i '(FORMAT/GT[0] == "1/1" && FORMAT/GT[1] == "1/1" && FORMAT/GT[2] != "0/1") || (FORMAT/GT[0] == "1/1" && FORMAT/GT[1] == "1/1" && FORMAT/GT[2] != "1/1")' | bcftools query -f "%CHROM\t%POS\tFF\n" | sed 's/^chr//' >> "$variant_heredity_file"
+    bcftools view --threads "$threads" -r $chrom_list_Y -Ou "$trio_vcf_file" | bcftools view --threads "$threads" -Ou  -i "FORMAT/DP[0] > $readdepth && FORMAT/DP[1] > $readdepth && FORMAT/DP[2] < $((readdepth/2))" | bcftools view --threads "$threads" -Ou -i '(FORMAT/GT[0] == "1/1" && FORMAT/GT[1] == "1/1" && FORMAT/GT[2] != "0/1") || (FORMAT/GT[0] == "1/1" && FORMAT/GT[1] == "1/1" && FORMAT/GT[2] != "1/1")' | bcftools query -f "%CHROM\t%POS\tFF\n" | sed 's/^chr//' >> "$variant_heredity_file"
 fi
 
+printf %31s"\n" |tr " " "#"
 ########################################################################
 ###                       Get vcf for proband                        ###
 ########################################################################
 echo ">> Get vcf for proband"
 
-if [ -f "${proband}.proband.vcf" ] && [ "$keepcreatedfiles" = "no" ]; then
+if [ -f "${proband}.proband.vcf" ] && [ "$overwritefiles" = "yes" ]; then
   rm "${proband}.proband.vcf"
   echo "'proband vcf file' is removed."
 fi
 
+
 if [ ! -f "${proband}.proband.vcf" ]; then
-  bcftools view --threads "$threads" -Ov -s "$proband" -r "$chrom_list_noY","$chrom_list_Y" "$inputfile" > "${proband}.proband.vcf"
+  nbPASS=$(bcftools query -f "QUAL\n" "$trio_vcf_file" | grep -c "PASS" )
+  if [[ "$nbPASS" -gt 0 ]]; then
+      echo "Field QUAL=PASS is detected"
+      bcftools view --threads "$threads" -Ov -f PASS -s "$proband" -r "$chrom_list_noY","$chrom_list_Y" "$trio_vcf_file" > "${proband}.proband.vcf"
+  else
+      echo "no field QUAL=PASS"
+      bcftools view --threads "$threads" -Ov -s "$proband" -r "$chrom_list_noY","$chrom_list_Y" "$trio_vcf_file" > "${proband}.proband.vcf"
+  fi
 fi
 
+printf %31s"\n" |tr " " "#"
 ########################################################################
 ###                           Run Automap                            ###
 ########################################################################
 echo ">> Run Automap"
 
-AUTOMAP_HOME="/opt/AutoMap/"
-
 # Remove previous ROD dir if necessary
-if [ -r "${proband}.ROH" ] && [ "$keepcreatedfiles" = "no" ]; then
+if [ -r "${proband}.ROH" ] && [ "$overwritefiles" = "yes" ]; then
   rm -r "${proband}.ROH"
   echo -e "Directory ${proband}.ROH is removed."
 fi
@@ -331,15 +384,41 @@ else
   roh_file=""
 fi
 
+printf %31s"\n" |tr " " "#"
 ########################################################################
 ###                          Make the plot                           ###
 ########################################################################
 echo ">> Make the plot"
-UPDgraph_py_HOME="."
-# UPDgraph_py_HOME=/opt/UPDgraph/
 
 python $UPDgraph_py_HOME/UPDgraph.py --file "$variant_heredity_file" --roh "$roh_file" -n "$naming_chr" -g "$genome" -o "$output"
 
+printf %31s"\n" |tr " " "#"
+########################################################################
+###                      Remove temporary file                       ###
+########################################################################
+
+if [[ "$keeptemporaryfiles" == "no" ]]; then
+     rm "$trio_vcf_file"
+     rm "${trio_vcf_file}.csi"
+     rm "$variant_heredity_file"
+     rm "${proband}.proband.vcf"
+     if [ -d "${proband}.ROH" ]; then
+       rm -r "${proband}.ROH"
+     fi
+fi
+
+########################################################################
+###                 Change permissions on all files                  ###
+########################################################################
+     chmod 774 "$trio_vcf_file"
+     chmod 774 "${trio_vcf_file}.csi"
+     chmod 774 "$variant_heredity_file"
+     chmod 774 "${proband}.proband.vcf"
+     if [ -d "${proband}.ROH" ]; then
+       chmod -R 774 "${proband}.ROH"
+     fi
+
+printf %31s"\n" |tr " " "#"
 ########################################################################
 ###                            Terminate                             ###
 ########################################################################
