@@ -27,7 +27,7 @@ cd UPDgraph
 singularity build UPDgraph.sif UPDgraph_singularity.def
 
 # Run UPDgraph using Singularity
-singularity exec -B $PWD UPDgraph.sif bash UPDgraph.sh --vcf /data/trio.vcf.gz -p /data/family.ped -g hg19 -o output.png
+singularity exec -B $PWD UPDgraph.sif bash UPDgraph.sh --vcf ./data/trio.vcf.gz -p ./data/family.ped -g hg19 -o output.png
 ```
 
 ### Option 2: Using Docker
@@ -41,7 +41,7 @@ cd UPDgraph
 docker build -t updgraph .
 
 # Run UPDgraph using Docker
-docker run -v $(pwd):/data updgraph bash UPDgraph.sh --vcf /data/trio.vcf.gz -p /data/family.ped -g hg19 -o output.png
+docker run -v $(pwd):/data updgraph bash UPDgraph.sh --vcf ./data/trio.vcf.gz -p ./data/family.ped -g hg19 -o output.png
 ```
 
 
@@ -62,7 +62,7 @@ git clone https://github.com/Fred-07/UPDgraph.git
 git clone https://github.com/Fred-07/AutoMap.git
 
 # Run UPDgraph locally
-bash ./UPDgraph/UPDgraph.sh --vcf /data/trio.vcf.gz -p /data/family.ped -g hg19 -a ./AutoMap/ -u ./UPDgraph/ -o output.png 
+bash ./UPDgraph/UPDgraph.sh --vcf ./UPDgraph/data/trio.vcf.gz -p ./UPDgraph/data/family.ped -g hg19 -a ./AutoMap/ -u ./UPDgraph/ -o output.png 
 ```
 
 **Note**: For local installation, specify the path to AutoMap (-a) and UPDgraph (-u) in the command.
@@ -116,18 +116,21 @@ For testing purposes, you can use the GIAB (Genome in a Bottle) Chinese Trio dat
 # Download and Merge the three VCF files into a single multi-sample VCF
 
 wget https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/ChineseTrio/HG005_NA24631_son/latest/GRCh37/HG005_GRCh37_1_22_v4.2.1_benchmark.vcf.gz
+wget https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/ChineseTrio/HG005_NA24631_son/latest/GRCh37/HG005_GRCh37_1_22_v4.2.1_benchmark.vcf.gz.tbi
 
 wget https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/ChineseTrio/HG006_NA24694_father/latest/GRCh37/HG006_GRCh37_1_22_v4.2.1_benchmark.vcf.gz
+wget https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/ChineseTrio/HG006_NA24694_father/latest/GRCh37/HG006_GRCh37_1_22_v4.2.1_benchmark.vcf.gz.tbi
 
 wget https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/ChineseTrio/HG007_NA24695_mother/latest/GRCh37/HG007_GRCh37_1_22_v4.2.1_benchmark.vcf.gz
+wget https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/ChineseTrio/HG007_NA24695_mother/latest/GRCh37/HG007_GRCh37_1_22_v4.2.1_benchmark.vcf.gz.tbi
 
-bcftools merge \
-    HG005_GRCh37_1_22_v4.2.1_benchmark.vcf.gz \
-    HG006_GRCh37_1_22_v4.2.1_benchmark.vcf.gz \
-    HG007_GRCh37_1_22_v4.2.1_benchmark.vcf.gz \
-    -O z -o trio.vcf.gz
+singularity exec -B $PWD UPDgraph.sif bcftools merge \
+  HG005_GRCh37_1_22_v4.2.1_benchmark.vcf.gz \
+  HG006_GRCh37_1_22_v4.2.1_benchmark.vcf.gz \
+  HG007_GRCh37_1_22_v4.2.1_benchmark.vcf.gz \
+  -O z -o ./data/trio.vcf.gz
 
-bcftools index -t trio.vcf.gz
+singularity exec -B $PWD UPDgraph.sif bcftools index -t ./data/trio.vcf.gz
 ```
 **Ped file for the GIAB Chinese Trio:**
 ```
@@ -136,10 +139,10 @@ FAM1	HG005	HG006	HG007	1	2
 
 After setup, your `data` directory should contain:
 ```
-/data/
+./data/
 ├── trio.vcf.gz
 ├── trio.vcf.gz.tbi
-└── trio.ped
+└── family.ped
 ```
 
 
